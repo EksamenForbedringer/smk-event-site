@@ -1,10 +1,15 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Document,
   Page,
   Text,
   View,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
+import QRCode from "qrcode";
 
 const styles = StyleSheet.create({
   page: {
@@ -23,6 +28,13 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingLeft: 40,
     width: "100%",
+  },
+  qrImage: {
+    marginTop: 20,
+    marginLeft: "auto",
+    marginRight: "auto",
+    width: 100,
+    height: 100,
   },
   row: {
     flexDirection: "row",
@@ -47,39 +59,72 @@ const styles = StyleSheet.create({
   },
 });
 
-const TicketDocument = ({ event, tickets, name, email }) => (
-  <Document>
-    <Page
-      size="A6"
-      style={styles.page}
-    >
-      <View style={styles.frame}>
-        <Text style={styles.title}>Event: {event.title}</Text>
+const TicketDocument = ({ event, tickets, name, email }) => {
+  const [qrCodeUrl, setQrCodeUrl] = useState(null);
 
-        <View style={styles.row}>
-          <View style={styles.column}>
-            <Text style={styles.infoLabel}>Navn:</Text>
-            <Text style={styles.infoText}>{name}</Text>
+  useEffect(() => {
+    const generateQRCode = async () => {
+      const bookingData = {
+        eventTitle: event.title,
+        name,
+        email,
+        tickets,
+        eventId: event.id,
+      };
 
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoText}>{email}</Text>
+      try {
+        const url = await QRCode.toDataURL(JSON.stringify(bookingData));
+        setQrCodeUrl(url);
+      } catch (err) {
+        console.error("Kunne ikke generere QR-kode:", err);
+      }
+    };
 
-            <Text style={styles.infoLabel}>Lokation:</Text>
-            <Text style={styles.infoText}>{event.location.address}</Text>
+    generateQRCode();
+  }, [event, name, email, tickets]);
 
-            <Text style={styles.infoLabel}>Dato:</Text>
-            <Text style={styles.infoText}>
-              {new Date(event.date).toLocaleDateString("da-DK")}
-            </Text>
+  if (!qrCodeUrl) return null;
+
+  return (
+    <Document>
+      <Page
+        size="A6"
+        style={styles.page}
+      >
+        <View style={styles.frame}>
+          <Text style={styles.title}>Event: {event.title}</Text>
+
+          <View style={styles.row}>
+            <View style={styles.column}>
+              <Text style={styles.infoLabel}>Navn:</Text>
+              <Text style={styles.infoText}>{name}</Text>
+
+              <Text style={styles.infoLabel}>Email:</Text>
+              <Text style={styles.infoText}>{email}</Text>
+
+              <Text style={styles.infoLabel}>Lokation:</Text>
+              <Text style={styles.infoText}>{event.location?.address}</Text>
+
+              <Text style={styles.infoLabel}>Dato:</Text>
+              <Text style={styles.infoText}>
+                {new Date(event.date).toLocaleDateString("da-DK")}
+              </Text>
+            </View>
+
+            <View style={styles.column}>
+              <Text style={styles.infoLabel}>Antal Billetter:</Text>
+              <Text style={styles.infoText}>{tickets}x</Text>
+            </View>
           </View>
-          <View style={styles.column}>
-            <Text style={styles.infoLabel}>Antal Billetter:</Text>
-            <Text style={styles.infoText}>{tickets}x</Text>
-          </View>
+
+          <Image
+            style={styles.qrImage}
+            src={qrCodeUrl}
+          />
         </View>
-      </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};
 
 export default TicketDocument;
